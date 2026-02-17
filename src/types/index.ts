@@ -5,6 +5,7 @@ export type SectionType =
   | "problem"
   | "solution"
   | "features"
+  | "trust"
   | "detail"
   | "reviews"
   | "cta";
@@ -20,6 +21,7 @@ export interface HeroSection {
   type: "hero";
   hookingText: string;
   subText: string;
+  badge?: string;
   imageUrl?: string;
   style: SectionStyle;
 }
@@ -61,15 +63,31 @@ export interface DetailSection {
   style: SectionStyle;
 }
 
+export interface TrustItem {
+  number: string;
+  label: string;
+}
+
+export interface TrustSection {
+  type: "trust";
+  title: string;
+  items: TrustItem[];
+  badges: string[];
+  style: SectionStyle;
+}
+
 export interface ReviewItem {
   author: string;
   rating: number;
   content: string;
+  verified?: boolean;
 }
 
 export interface ReviewsSection {
   type: "reviews";
   title: string;
+  averageRating: number;
+  totalReviews: number;
   items: ReviewItem[];
   style: SectionStyle;
 }
@@ -79,6 +97,7 @@ export interface CTASection {
   title: string;
   description: string;
   buttonText: string;
+  urgencyText?: string;
   style: SectionStyle;
 }
 
@@ -87,6 +106,7 @@ export type PageSection =
   | ProblemSection
   | SolutionSection
   | FeaturesSection
+  | TrustSection
   | DetailSection
   | ReviewsSection
   | CTASection;

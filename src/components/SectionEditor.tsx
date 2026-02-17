@@ -46,6 +46,7 @@ export default function SectionEditor({
     problem: "문제 제기",
     solution: "해결책",
     features: "특장점",
+    trust: "신뢰 구축",
     detail: "상세 정보",
     reviews: "고객 후기",
     cta: "구매 유도",
@@ -150,6 +151,11 @@ function ContentEditor({
             label="서브 텍스트"
             value={section.subText}
             onChange={(v) => onUpdate({ ...section, subText: v })}
+          />
+          <Field
+            label="뱃지"
+            value={section.badge || ""}
+            onChange={(v) => onUpdate({ ...section, badge: v })}
           />
         </div>
       );
@@ -299,6 +305,38 @@ function ContentEditor({
           ))}
         </div>
       );
+    case "trust":
+      return (
+        <div className="space-y-4">
+          <Field
+            label="제목"
+            value={section.title}
+            onChange={(v) => onUpdate({ ...section, title: v })}
+          />
+          {section.items.map((item, i) => (
+            <div key={i} className="flex gap-2">
+              <Field
+                label="숫자"
+                value={item.number}
+                onChange={(v) => {
+                  const items = [...section.items];
+                  items[i] = { ...items[i], number: v };
+                  onUpdate({ ...section, items });
+                }}
+              />
+              <Field
+                label="라벨"
+                value={item.label}
+                onChange={(v) => {
+                  const items = [...section.items];
+                  items[i] = { ...items[i], label: v };
+                  onUpdate({ ...section, items });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      );
     case "cta":
       return (
         <div className="space-y-4">
@@ -316,6 +354,11 @@ function ContentEditor({
             label="버튼 텍스트"
             value={section.buttonText}
             onChange={(v) => onUpdate({ ...section, buttonText: v })}
+          />
+          <Field
+            label="긴급성 문구"
+            value={section.urgencyText || ""}
+            onChange={(v) => onUpdate({ ...section, urgencyText: v })}
           />
         </div>
       );

@@ -5,22 +5,70 @@ import {
   FeatureItem,
 } from "@/types";
 
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models";
+const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// ===== Gemini Flash: 경쟁사 분석 & 레이아웃 =====
+// ===== 이미지 생성 (Nano Banana) =====
+
+export async function generateImages(
+  productName: string,
+  description: string
+): Promise<Record<string, string>> {
+  if (!API_KEY) return {};
+
+  const prompts: { key: string; prompt: string }[] = [
+    {
+      key: "hero",
+      prompt: `Professional commercial product photography of "${productName}". ${description || ""}. Clean white studio background, soft studio lighting, high-end product shot, minimalist composition. 4K quality, photorealistic.`,
+    },
+    {
+      key: "detail",
+      prompt: `Close-up detail shot of "${productName}". ${description || ""}. Showing texture and craftsmanship, macro product photography, professional lighting, shallow depth of field. 4K quality.`,
+    },
+  ];
+
+  const images: Record<string, string> = {};
+
+  await Promise.allSettled(
+    prompts.map(async ({ key, prompt }) => {
+      try {
+        const res = await fetch(
+          `${BASE_URL}/nano-banana-pro-preview:generateContent?key=${API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+            }),
+          }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData) {
+            images[key] = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+            break;
+          }
+        }
+      } catch {}
+    })
+  );
+
+  return images;
+}
+
+// ===== 경쟁사 분석 (Gemini 3.0 Flash) =====
 
 export async function analyzeCompetitor(
   url: string
 ): Promise<AIAnalysisResult> {
-  if (!GEMINI_API_KEY) {
-    return getMockAnalysis();
-  }
+  if (!API_KEY) return getFallbackAnalysis();
 
   try {
-    const response = await fetch(
-      `${GEMINI_API_URL}/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    const res = await fetch(
+      `${BASE_URL}/gemini-3-flash-preview:generateContent?key=${API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -31,41 +79,39 @@ export async function analyzeCompetitor(
                 {
                   text: `다음 URL의 상세페이지를 분석해주세요: ${url}
 
-JSON 형식으로 다음을 반환해주세요:
+JSON 형식으로 반환:
 {
-  "competitorStrengths": ["강점1", "강점2", ...],
-  "designElements": ["디자인 요소1", ...],
-  "suggestedStructure": ["hero", "problem", "solution", "features", "detail", "reviews", "cta"],
+  "competitorStrengths": ["강점1", "강점2"],
+  "designElements": ["디자인 요소1"],
+  "suggestedStructure": ["hero","problem","solution","features","trust","detail","reviews","cta"],
   "targetAudience": "타겟 고객 설명"
 }`,
                 },
               ],
             },
           ],
-          generationConfig: {
-            responseMimeType: "application/json",
-          },
+          generationConfig: { responseMimeType: "application/json" },
         }),
       }
     );
 
-    const data = await response.json();
+    const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text ? JSON.parse(text) : getMockAnalysis();
+    let result = text ? JSON.parse(text) : getFallbackAnalysis();
+    if (Array.isArray(result)) result = result[0];
+    return result;
   } catch {
-    return getMockAnalysis();
+    return getFallbackAnalysis();
   }
 }
 
-// ===== Gemini Nano: 카피라이팅 생성 =====
+// ===== 카피라이팅 생성 (Gemini 3.0 Flash) =====
 
 export async function generateCopy(
   input: ProductInput,
   analysis?: AIAnalysisResult
 ): Promise<AICopyResult> {
-  if (!GEMINI_API_KEY) {
-    return getMockCopy(input.productName);
-  }
+  if (!API_KEY) return getFallbackCopy(input.productName);
 
   try {
     const prompt = `당신은 최고의 상세페이지 카피라이터입니다.
@@ -90,31 +136,31 @@ ${analysis ? `경쟁사 강점: ${analysis.competitorStrengths.join(", ")}` : ""
   "ctaText": "CTA 버튼 문구"
 }`;
 
-    const response = await fetch(
-      `${GEMINI_API_URL}/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    const res = await fetch(
+      `${BASE_URL}/gemini-3-flash-preview:generateContent?key=${API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-          },
+          generationConfig: { responseMimeType: "application/json" },
         }),
       }
     );
 
-    const data = await response.json();
+    const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text ? JSON.parse(text) : getMockCopy(input.productName);
+    let result = text ? JSON.parse(text) : getFallbackCopy(input.productName);
+    if (Array.isArray(result)) result = result[0];
+    return result;
   } catch {
-    return getMockCopy(input.productName);
+    return getFallbackCopy(input.productName);
   }
 }
 
-// ===== Mock 데이터 (API 키 없을 때) =====
+// ===== 폴백 =====
 
-function getMockAnalysis(): AIAnalysisResult {
+function getFallbackAnalysis(): AIAnalysisResult {
   return {
     competitorStrengths: [
       "직관적인 비주얼 중심 레이아웃",
@@ -128,35 +174,17 @@ function getMockAnalysis(): AIAnalysisResult {
       "그라데이션 CTA 버튼",
     ],
     suggestedStructure: [
-      "hero",
-      "problem",
-      "solution",
-      "features",
-      "detail",
-      "reviews",
-      "cta",
+      "hero", "problem", "solution", "features", "trust", "detail", "reviews", "cta",
     ],
     targetAudience: "20-40대 온라인 쇼핑에 익숙한 소비자",
   };
 }
 
-function getMockCopy(productName: string): AICopyResult {
+function getFallbackCopy(productName: string): AICopyResult {
   const features: FeatureItem[] = [
-    {
-      icon: "star",
-      title: "프리미엄 품질",
-      description: "엄선된 소재와 검증된 공정으로 만들어진 최상의 품질을 경험하세요.",
-    },
-    {
-      icon: "shield",
-      title: "안심 보장",
-      description: "30일 무조건 환불 보장. 만족하지 않으시면 전액 환불해드립니다.",
-    },
-    {
-      icon: "zap",
-      title: "빠른 효과",
-      description: "사용 즉시 체감할 수 있는 확실한 변화를 느껴보세요.",
-    },
+    { icon: "star", title: "프리미엄 품질", description: "엄선된 소재와 검증된 공정으로 만들어진 최상의 품질을 경험하세요." },
+    { icon: "shield", title: "안심 보장", description: "30일 무조건 환불 보장. 만족하지 않으시면 전액 환불해드립니다." },
+    { icon: "zap", title: "빠른 효과", description: "사용 즉시 체감할 수 있는 확실한 변화를 느껴보세요." },
   ];
 
   return {
