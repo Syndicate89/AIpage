@@ -167,6 +167,11 @@ function ContentEditor({
             value={section.title}
             onChange={(v) => onUpdate({ ...section, title: v })}
           />
+          <Field
+            label="소제목"
+            value={section.subtitle || ""}
+            onChange={(v) => onUpdate({ ...section, subtitle: v })}
+          />
           {section.problems.map((p, i) => (
             <Field
               key={i}
@@ -179,6 +184,11 @@ function ContentEditor({
               }}
             />
           ))}
+          <Field
+            label="전환 문구"
+            value={section.transitionText || ""}
+            onChange={(v) => onUpdate({ ...section, transitionText: v })}
+          />
         </div>
       );
     case "solution":
@@ -195,6 +205,18 @@ function ContentEditor({
             onChange={(v) => onUpdate({ ...section, description: v })}
             multiline
           />
+          {section.highlights?.map((h, i) => (
+            <Field
+              key={i}
+              label={`하이라이트 ${i + 1}`}
+              value={h}
+              onChange={(v) => {
+                const highlights = [...(section.highlights || [])];
+                highlights[i] = v;
+                onUpdate({ ...section, highlights });
+              }}
+            />
+          ))}
         </div>
       );
     case "features":
@@ -301,6 +323,15 @@ function ContentEditor({
                   onUpdate({ ...section, items });
                 }}
               />
+              <Field
+                label="태그 (BEST, 재구매 등)"
+                value={review.tag || ""}
+                onChange={(v) => {
+                  const items = [...section.items];
+                  items[i] = { ...items[i], tag: v || undefined };
+                  onUpdate({ ...section, items });
+                }}
+              />
             </div>
           ))}
         </div>
@@ -359,6 +390,21 @@ function ContentEditor({
             label="긴급성 문구"
             value={section.urgencyText || ""}
             onChange={(v) => onUpdate({ ...section, urgencyText: v })}
+          />
+          <Field
+            label="원래 가격"
+            value={section.originalPrice || ""}
+            onChange={(v) => onUpdate({ ...section, originalPrice: v })}
+          />
+          <Field
+            label="할인 가격"
+            value={section.salePrice || ""}
+            onChange={(v) => onUpdate({ ...section, salePrice: v })}
+          />
+          <Field
+            label="할인율"
+            value={section.discountRate || ""}
+            onChange={(v) => onUpdate({ ...section, discountRate: v })}
           />
         </div>
       );

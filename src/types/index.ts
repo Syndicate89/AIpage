@@ -23,13 +23,16 @@ export interface HeroSection {
   subText: string;
   badge?: string;
   imageUrl?: string;
+  socialProofCount?: number;
   style: SectionStyle;
 }
 
 export interface ProblemSection {
   type: "problem";
   title: string;
+  subtitle?: string;
   problems: string[];
+  transitionText?: string;
   style: SectionStyle;
 }
 
@@ -38,6 +41,7 @@ export interface SolutionSection {
   title: string;
   description: string;
   imageUrl?: string;
+  highlights?: string[];
   style: SectionStyle;
 }
 
@@ -47,10 +51,18 @@ export interface FeatureItem {
   description: string;
 }
 
+export interface ComparisonRow {
+  label: string;
+  competitor: string;
+  ours: string;
+}
+
 export interface FeaturesSection {
   type: "features";
   title: string;
+  subtitle?: string;
   items: FeatureItem[];
+  comparisons?: ComparisonRow[];
   style: SectionStyle;
 }
 
@@ -68,11 +80,17 @@ export interface TrustItem {
   label: string;
 }
 
+export interface SatisfactionBar {
+  label: string;
+  percentage: number;
+}
+
 export interface TrustSection {
   type: "trust";
   title: string;
   items: TrustItem[];
   badges: string[];
+  satisfactionBars?: SatisfactionBar[];
   style: SectionStyle;
 }
 
@@ -81,6 +99,12 @@ export interface ReviewItem {
   rating: number;
   content: string;
   verified?: boolean;
+  tag?: string;
+}
+
+export interface StarDistribution {
+  stars: number;
+  percentage: number;
 }
 
 export interface ReviewsSection {
@@ -89,6 +113,7 @@ export interface ReviewsSection {
   averageRating: number;
   totalReviews: number;
   items: ReviewItem[];
+  starDistribution?: StarDistribution[];
   style: SectionStyle;
 }
 
@@ -98,6 +123,9 @@ export interface CTASection {
   description: string;
   buttonText: string;
   urgencyText?: string;
+  originalPrice?: string;
+  salePrice?: string;
+  discountRate?: string;
   style: SectionStyle;
 }
 
