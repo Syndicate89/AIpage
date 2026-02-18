@@ -15,7 +15,6 @@ import {
   FileImage,
   Stamp,
 } from "lucide-react";
-import html2canvas from "html2canvas";
 import { DetailPage, PageSection } from "@/types";
 import SectionRenderer from "@/components/SectionRenderer";
 import SectionEditor from "@/components/SectionEditor";
@@ -113,18 +112,29 @@ export default function EditorPage() {
     setSelectedIndex(null);
 
     // DOM 업데이트 대기
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 300));
 
     try {
-      const canvas = await html2canvas(captureRef.current, {
+      // 동적 import로 html2canvas 로드
+      const html2canvasModule = await import("html2canvas");
+      const html2canvas = html2canvasModule.default;
+
+      const target = captureRef.current;
+
+      const canvas = await html2canvas(target, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
-        width: captureRef.current.scrollWidth,
-        height: captureRef.current.scrollHeight,
-        windowWidth: captureRef.current.scrollWidth,
-        windowHeight: captureRef.current.scrollHeight,
+        logging: false,
+        imageTimeout: 15000,
+        onclone: (clonedDoc) => {
+          // 클론된 DOM에서 선택 링/커서 스타일 제거
+          const clonedTarget = clonedDoc.querySelector("[data-capture]");
+          if (clonedTarget) {
+            (clonedTarget as HTMLElement).style.paddingBottom = "0";
+          }
+        },
       });
 
       if (withWatermark) {
@@ -136,8 +146,8 @@ export default function EditorPage() {
           const fontSize = Math.max(w * 0.12, 60);
           const gap = fontSize * 2.5;
 
-          ctx.font = `900 ${fontSize}px "Arial", sans-serif`;
-          ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
+          ctx.font = `900 ${fontSize}px Arial, sans-serif`;
+          ctx.fillStyle = "rgba(0, 0, 0, 0.13)";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
 
@@ -156,17 +166,17 @@ export default function EditorPage() {
         }
       }
 
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        const suffix = withWatermark ? "_sample" : "";
-        a.download = `${page.productName}_상세페이지${suffix}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }, "image/png");
-    } catch {
+      // canvas를 blob으로 변환 후 다운로드
+      const dataUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      const suffix = withWatermark ? "_sample" : "";
+      a.download = `${page.productName}_상세페이지${suffix}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("PNG export error:", err);
       alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setIsExporting(false);
@@ -345,7 +355,8 @@ export default function EditorPage() {
       {/* Section List — capture target */}
       <div
         ref={captureRef}
-        className={`flex-1 ${selectedIndex !== null ? "pb-[50vh]" : "pb-6"}`}
+        data-capture
+        className={`flex-1 ${selectedIndex !== null ? "pb-[50vh]" : ""}`}
         style={{ fontFamily: page.brandGuide.fontFamily }}
       >
         {page.sections.map((section, index) => (
