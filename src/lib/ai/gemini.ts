@@ -22,11 +22,11 @@ export async function generateImages(
   const prompts: { key: string; prompt: string }[] = [
     {
       key: "hero",
-      prompt: `Professional commercial product photography of "${productName}". ${description || ""}. Clean white studio background, soft studio lighting, high-end product shot, minimalist composition. 4K quality, photorealistic.`,
+      prompt: `Professional commercial product photography of "${productName}". ${description || ""}. Clean white studio background, soft studio lighting, high-end product shot, minimalist composition. 4K quality, photorealistic. No text, no labels, no watermarks, no letters, no words, no typography, no writing on the image.`,
     },
     {
       key: "detail",
-      prompt: `Close-up detail shot of "${productName}". ${description || ""}. Showing texture and craftsmanship, macro product photography, professional lighting, shallow depth of field. 4K quality.`,
+      prompt: `Close-up detail shot of "${productName}". ${description || ""}. Showing texture and craftsmanship, macro product photography, professional lighting, shallow depth of field. 4K quality. No text, no labels, no watermarks, no letters, no words, no typography, no writing on the image.`,
     },
   ];
 
