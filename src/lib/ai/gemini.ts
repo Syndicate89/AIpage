@@ -3,6 +3,9 @@ import {
   AICopyResult,
   ProductInput,
   FeatureItem,
+  ImageAnalysisResult,
+  CategoryId,
+  SectionType,
 } from "@/types";
 
 const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
@@ -155,6 +158,106 @@ ${analysis ? `경쟁사 강점: ${analysis.competitorStrengths.join(", ")}` : ""
     return result;
   } catch {
     return getFallbackCopy(input.productName);
+  }
+}
+
+// ===== 이미지 분석 (Gemini Vision) =====
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function getFallbackImageAnalysis(): ImageAnalysisResult {
+  return {
+    detectedCategory: "lifestyle",
+    suggestedColorPalette: { primaryColor: "#78716c", secondaryColor: "#a8a29e", backgroundColor: "#fafaf9" },
+    suggestedSectionOrder: ["hero", "problem", "solution", "features", "trust", "detail", "reviews", "cta"],
+    layoutDescription: "일반적인 상세페이지 레이아웃",
+    confidence: 0.3,
+  };
+}
+
+const VALID_CATEGORIES: CategoryId[] = ["beauty", "health", "fashion", "electronics", "food", "lifestyle"];
+const VALID_SECTIONS: SectionType[] = ["hero", "problem", "solution", "features", "trust", "detail", "reviews", "cta"];
+
+export async function analyzeDetailPageImage(imageFile: File): Promise<ImageAnalysisResult> {
+  if (!API_KEY) return getFallbackImageAnalysis();
+
+  try {
+    const base64Data = await fileToBase64(imageFile);
+    const mimeType = imageFile.type || "image/jpeg";
+
+    const res = await fetch(
+      `${BASE_URL}/gemini-3-flash-preview:generateContent?key=${API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  inlineData: { mimeType, data: base64Data },
+                },
+                {
+                  text: `이 이미지는 이커머스 상세페이지 스크린샷입니다. 분석해주세요.
+
+1. 카테고리 감지: beauty, health, fashion, electronics, food, lifestyle 중 하나
+2. 색상 3개 추출: 메인 색상(primaryColor), 보조 색상(secondaryColor), 배경 색상(backgroundColor) - hex 코드
+3. 섹션 구성 분석: hero, problem, solution, features, trust, detail, reviews, cta 중 감지된 순서
+4. 레이아웃 설명: 한 줄 요약
+5. 신뢰도: 0~1 사이 값
+
+JSON 형식으로 반환:
+{
+  "detectedCategory": "beauty",
+  "suggestedColorPalette": { "primaryColor": "#e91e8c", "secondaryColor": "#f472b6", "backgroundColor": "#fdf2f8" },
+  "suggestedSectionOrder": ["hero", "trust", "features", "detail", "reviews", "cta"],
+  "layoutDescription": "핑크 톤의 뷰티 상세페이지, 신뢰 섹션 강조",
+  "confidence": 0.85
+}`,
+                },
+              ],
+            },
+          ],
+          generationConfig: { responseMimeType: "application/json" },
+        }),
+      }
+    );
+
+    if (!res.ok) return getFallbackImageAnalysis();
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return getFallbackImageAnalysis();
+
+    let result = JSON.parse(text);
+    if (Array.isArray(result)) result = result[0];
+
+    // 응답 검증
+    if (!VALID_CATEGORIES.includes(result.detectedCategory)) {
+      result.detectedCategory = "lifestyle";
+    }
+    if (result.suggestedSectionOrder) {
+      result.suggestedSectionOrder = result.suggestedSectionOrder.filter(
+        (s: string) => VALID_SECTIONS.includes(s as SectionType)
+      );
+      if (result.suggestedSectionOrder.length === 0) {
+        result.suggestedSectionOrder = VALID_SECTIONS;
+      }
+    }
+
+    return result as ImageAnalysisResult;
+  } catch {
+    return getFallbackImageAnalysis();
   }
 }
 

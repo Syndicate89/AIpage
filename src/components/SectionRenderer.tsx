@@ -92,17 +92,34 @@ function renderSection(section: PageSection) {
    ================================================================ */
 function HeroBlock({ section }: { section: HeroSection }) {
   const accent = section.style.accentColor || "#f59e0b";
+  const hasBgImage = !!section.backgroundImageUrl;
 
   return (
     <div
       className="relative overflow-hidden"
-      style={{ background: `radial-gradient(ellipse at 50% 30%, ${accent}18 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, ${accent}0a 0%, transparent 50%), ${section.style.backgroundColor}`, color: section.style.textColor }}
+      style={{
+        background: hasBgImage
+          ? undefined
+          : `radial-gradient(ellipse at 50% 30%, ${accent}18 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, ${accent}0a 0%, transparent 50%), ${section.style.backgroundColor}`,
+        color: section.style.textColor,
+        fontFamily: section.style.fontFamily,
+      }}
     >
+      {/* 배경 이미지 + 오버레이 */}
+      {hasBgImage && (
+        <>
+          <div className="absolute inset-0" style={{ backgroundImage: `url(${section.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+          <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${section.style.backgroundColor}ee 0%, ${section.style.backgroundColor}cc 50%, ${section.style.backgroundColor}ee 100%)` }} />
+        </>
+      )}
+
       {/* 배경 글로우 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full opacity-[0.08]" style={{ background: `radial-gradient(circle, ${accent}, transparent 70%)` }} />
-        <div className="absolute bottom-0 left-0 w-full h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}40, transparent)` }} />
-      </div>
+      {!hasBgImage && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full opacity-[0.08]" style={{ background: `radial-gradient(circle, ${accent}, transparent 70%)` }} />
+          <div className="absolute bottom-0 left-0 w-full h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}40, transparent)` }} />
+        </div>
+      )}
 
       <div className="relative z-10 px-6 pt-20 pb-12">
         {/* 뱃지 */}
@@ -173,9 +190,17 @@ function HeroBlock({ section }: { section: HeroSection }) {
    ================================================================ */
 function ProblemBlock({ section }: { section: ProblemSection }) {
   const accent = section.style.accentColor || "#ef4444";
+  const hasBgImage = !!section.backgroundImageUrl;
 
   return (
-    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding }}>
+    <div className="relative overflow-hidden" style={{ backgroundColor: hasBgImage ? undefined : section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding, fontFamily: section.style.fontFamily }}>
+      {hasBgImage && (
+        <>
+          <div className="absolute inset-0" style={{ backgroundImage: `url(${section.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+          <div className="absolute inset-0" style={{ background: `${section.style.backgroundColor}e6` }} />
+        </>
+      )}
+      <div className={hasBgImage ? "relative z-10" : ""}>
       {/* 헤더 */}
       <div className="text-center mb-10">
         {section.subtitle && (
@@ -226,6 +251,7 @@ function ProblemBlock({ section }: { section: ProblemSection }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -237,7 +263,7 @@ function SolutionBlock({ section }: { section: SolutionSection }) {
   const accent = section.style.accentColor || "#2563eb";
 
   return (
-    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding }}>
+    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding, fontFamily: section.style.fontFamily }}>
       {/* 카테고리 태그 */}
       <p className="text-[12px] font-bold tracking-[0.08em] uppercase mb-3" style={{ color: accent }}>
         ✦ 솔루션
@@ -279,7 +305,7 @@ function FeaturesBlock({ section }: { section: FeaturesSection }) {
   const accent = section.style.accentColor || "#2563eb";
 
   return (
-    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding }}>
+    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding, fontFamily: section.style.fontFamily }}>
       {/* 헤더 */}
       <div className="text-center mb-10">
         {section.subtitle && (
@@ -348,7 +374,7 @@ function TrustBlock({ section }: { section: TrustSection }) {
   const accent = section.style.accentColor || "#2563eb";
 
   return (
-    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding }}>
+    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding, fontFamily: section.style.fontFamily }}>
       <h2 className="text-[22px] font-black mb-8 text-center tracking-[-0.03em]">
         {section.title}
       </h2>
@@ -403,7 +429,7 @@ function DetailBlock({ section }: { section: DetailSection }) {
   const accent = section.style.accentColor || "#2563eb";
 
   return (
-    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding }}>
+    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding, fontFamily: section.style.fontFamily }}>
       <div className="flex items-center gap-2 mb-2">
         <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: accent }} />
         <h2 className="text-[22px] font-black tracking-[-0.03em]">{section.title}</h2>
@@ -450,7 +476,7 @@ function ReviewsBlock({ section }: { section: ReviewsSection }) {
   const total = section.totalReviews || 8420;
 
   return (
-    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding }}>
+    <div style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, padding: section.style.padding, fontFamily: section.style.fontFamily }}>
       {/* 섹션 헤더 */}
       <div className="text-center mb-8">
         <p className="text-[12px] font-bold tracking-[0.08em] uppercase mb-2" style={{ color: "#eab308" }}>
@@ -557,6 +583,7 @@ function ReviewsBlock({ section }: { section: ReviewsSection }) {
    ================================================================ */
 function CTABlock({ section }: { section: CTASection }) {
   const accent = section.style.accentColor || "#2563eb";
+  const hasBgImage = !!section.backgroundImageUrl;
   const [timeLeft, setTimeLeft] = useState({ h: 2, m: 47, s: 33 });
 
   useEffect(() => {
@@ -576,11 +603,20 @@ function CTABlock({ section }: { section: CTASection }) {
   return (
     <div
       className="relative overflow-hidden"
-      style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor }}
+      style={{ backgroundColor: section.style.backgroundColor, color: section.style.textColor, fontFamily: section.style.fontFamily }}
     >
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-30%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full" style={{ background: `radial-gradient(circle, ${accent}12, transparent 70%)` }} />
-      </div>
+      {hasBgImage && (
+        <>
+          <div className="absolute inset-0" style={{ backgroundImage: `url(${section.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+          <div className="absolute inset-0" style={{ background: `${section.style.backgroundColor}e6` }} />
+        </>
+      )}
+
+      {!hasBgImage && (
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-30%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full" style={{ background: `radial-gradient(circle, ${accent}12, transparent 70%)` }} />
+        </div>
+      )}
 
       <div className="relative z-10 px-6 py-14">
         {/* 실시간 뷰어 배너 */}

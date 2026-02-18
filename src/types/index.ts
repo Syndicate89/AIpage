@@ -15,6 +15,7 @@ export interface SectionStyle {
   textColor: string;
   accentColor: string;
   padding: string;
+  fontFamily?: string;
 }
 
 export interface HeroSection {
@@ -23,6 +24,7 @@ export interface HeroSection {
   subText: string;
   badge?: string;
   imageUrl?: string;
+  backgroundImageUrl?: string;
   socialProofCount?: number;
   style: SectionStyle;
 }
@@ -33,6 +35,7 @@ export interface ProblemSection {
   subtitle?: string;
   problems: string[];
   transitionText?: string;
+  backgroundImageUrl?: string;
   style: SectionStyle;
 }
 
@@ -126,6 +129,7 @@ export interface CTASection {
   originalPrice?: string;
   salePrice?: string;
   discountRate?: string;
+  backgroundImageUrl?: string;
   style: SectionStyle;
 }
 
@@ -165,6 +169,7 @@ export interface ProductInput {
   competitorUrl: string;
   images: File[];
   brandGuide: BrandGuide;
+  template?: CategoryTemplate;
 }
 
 // ===== AI 응답 타입 =====
@@ -199,4 +204,41 @@ export interface EditorState {
   isEditing: boolean;
   history: DetailPage[];
   historyIndex: number;
+}
+
+// ===== 카테고리 템플릿 =====
+
+export type CategoryId = "beauty" | "health" | "fashion" | "electronics" | "food" | "lifestyle";
+
+export interface TemplateDefaults {
+  badge: string;
+  socialProofCount: number;
+  highlights: string[];
+  comparisons: ComparisonRow[];
+  trustItems: TrustItem[];
+  badges: string[];
+  satisfactionBars: SatisfactionBar[];
+  specs: { label: string; value: string }[];
+  originalPrice: string;
+  salePrice: string;
+  discountRate: string;
+  urgencyText: string;
+}
+
+export interface CategoryTemplate {
+  id: CategoryId;
+  name: string;
+  icon: string;
+  description: string;
+  sectionOrder: SectionType[];
+  colorPalette: { primaryColor: string; secondaryColor: string; backgroundColor: string };
+  defaults: TemplateDefaults;
+}
+
+export interface ImageAnalysisResult {
+  detectedCategory: CategoryId;
+  suggestedColorPalette: { primaryColor: string; secondaryColor: string; backgroundColor: string };
+  suggestedSectionOrder: SectionType[];
+  layoutDescription: string;
+  confidence: number;
 }

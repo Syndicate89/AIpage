@@ -262,7 +262,10 @@ ${sectionsHTML}
       </header>
 
       {/* Section List */}
-      <div className={`flex-1 ${selectedIndex !== null ? "pb-[50vh]" : "pb-6"}`}>
+      <div
+        className={`flex-1 ${selectedIndex !== null ? "pb-[50vh]" : "pb-6"}`}
+        style={{ fontFamily: page.brandGuide.fontFamily }}
+      >
         {page.sections.map((section, index) => (
           <motion.div
             key={`${section.type}-${index}`}

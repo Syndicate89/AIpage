@@ -13,11 +13,15 @@ import {
   X,
   FileText,
   Check,
+  Scan,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { generateDetailPage } from "@/lib/generator";
-import { ProductInput, BrandGuide } from "@/types";
+import { ProductInput, BrandGuide, CategoryId, CategoryTemplate, ImageAnalysisResult } from "@/types";
+import { categoryTemplates, getTemplateById } from "@/lib/templates";
+import { analyzeDetailPageImage } from "@/lib/ai/gemini";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
 const PRESET_COLORS = [
@@ -36,6 +40,7 @@ const FONT_OPTIONS = [
 export default function Home() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
 
   const [productName, setProductName] = useState("");
   const [description, setDescription] = useState("");
@@ -52,6 +57,66 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
   const [loadingProgress, setLoadingProgress] = useState(0);
+
+  // 템플릿 관련 상태
+  const [selectedCategory, setSelectedCategory] = useState<CategoryId | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<CategoryTemplate | null>(null);
+  const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<ImageAnalysisResult | null>(null);
+
+  const handleCategorySelect = (categoryId: CategoryId) => {
+    if (selectedCategory === categoryId) {
+      // 이미 선택된 카테고리 클릭 시 해제
+      setSelectedCategory(null);
+      setSelectedTemplate(null);
+      return;
+    }
+    setSelectedCategory(categoryId);
+    const template = getTemplateById(categoryId);
+    if (template) {
+      setSelectedTemplate(template);
+      setPrimaryColor(template.colorPalette.primaryColor);
+      setSecondaryColor(template.colorPalette.secondaryColor);
+    }
+    // 이미지 분석 결과 초기화
+    setAnalysisResult(null);
+    setReferenceImage(null);
+  };
+
+  const handleReferenceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setReferenceImage(file);
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+
+    try {
+      const result = await analyzeDetailPageImage(file);
+      setAnalysisResult(result);
+
+      // 감지된 카테고리로 자동 선택
+      setSelectedCategory(result.detectedCategory);
+      const template = getTemplateById(result.detectedCategory);
+      if (template) {
+        setSelectedTemplate(template);
+      }
+
+      // 분석된 색상 적용
+      setPrimaryColor(result.suggestedColorPalette.primaryColor);
+      setSecondaryColor(result.suggestedColorPalette.secondaryColor);
+    } catch {
+      // 분석 실패 시 무시
+    } finally {
+      setIsAnalyzing(false);
+    }
+
+    // input 초기화
+    if (referenceInputRef.current) {
+      referenceInputRef.current.value = "";
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -91,6 +156,7 @@ export default function Home() {
       competitorUrl,
       images,
       brandGuide,
+      template: selectedTemplate || undefined,
     };
 
     try {
@@ -155,6 +221,134 @@ export default function Home() {
 
         {/* Input Form */}
         <div className="space-y-4">
+          {/* 카테고리 템플릿 선택 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="p-5 rounded-2xl bg-card border shadow-sm space-y-4"
+          >
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Palette className="w-3 h-3" /> 카테고리 템플릿 (선택)
+            </label>
+
+            <div className="grid grid-cols-3 gap-2">
+              {categoryTemplates.map((tmpl) => (
+                <button
+                  key={tmpl.id}
+                  onClick={() => handleCategorySelect(tmpl.id)}
+                  className={`p-3 rounded-xl border-2 transition-all text-center flex flex-col items-center gap-1.5 ${
+                    selectedCategory === tmpl.id
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-transparent bg-secondary/50 hover:bg-secondary"
+                  }`}
+                >
+                  <span className="text-xl">{tmpl.icon}</span>
+                  <span className="text-[11px] font-bold leading-tight">{tmpl.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {selectedTemplate && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3"
+              >
+                <span className="font-bold text-foreground">{selectedTemplate.name}</span> — {selectedTemplate.description}
+              </motion.div>
+            )}
+
+            {/* 구분선 */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">또는</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* 참고 이미지 업로드 */}
+            <button
+              onClick={() => referenceInputRef.current?.click()}
+              disabled={isAnalyzing}
+              className="w-full p-4 rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 transition-all flex items-center gap-3 group disabled:opacity-60"
+            >
+              <div className="p-2 rounded-full bg-muted group-hover:bg-primary/10 transition-colors shrink-0">
+                {isAnalyzing ? (
+                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                ) : (
+                  <Scan className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                )}
+              </div>
+              <div className="text-left">
+                <span className="text-xs font-bold block">
+                  {isAnalyzing ? "AI가 이미지를 분석 중..." : "참고 이미지로 템플릿 생성"}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  상세페이지 스크린샷을 업로드하면 AI가 분석합니다
+                </span>
+              </div>
+            </button>
+            <input
+              ref={referenceInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleReferenceUpload}
+              className="hidden"
+            />
+
+            {/* 분석 결과 */}
+            <AnimatePresence>
+              {analysisResult && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                      분석 완료
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      신뢰도 {Math.round(analysisResult.confidence * 100)}%
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    감지 카테고리: <span className="font-bold text-foreground">
+                      {categoryTemplates.find((t) => t.id === analysisResult.detectedCategory)?.name || analysisResult.detectedCategory}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground">추출 색상:</span>
+                    <div className="flex gap-1">
+                      <div
+                        className="w-4 h-4 rounded-full border border-white shadow-sm"
+                        style={{ backgroundColor: analysisResult.suggestedColorPalette.primaryColor }}
+                        title="메인 색상"
+                      />
+                      <div
+                        className="w-4 h-4 rounded-full border border-white shadow-sm"
+                        style={{ backgroundColor: analysisResult.suggestedColorPalette.secondaryColor }}
+                        title="보조 색상"
+                      />
+                      <div
+                        className="w-4 h-4 rounded-full border border-white shadow-sm"
+                        style={{ backgroundColor: analysisResult.suggestedColorPalette.backgroundColor }}
+                        title="배경 색상"
+                      />
+                    </div>
+                  </div>
+                  {analysisResult.layoutDescription && (
+                    <div className="text-[10px] text-muted-foreground">
+                      {analysisResult.layoutDescription}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
           {/* 제품 기본 정보 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
