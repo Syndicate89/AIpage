@@ -115,32 +115,35 @@ export default function EditorPage() {
     await new Promise((r) => setTimeout(r, 300));
 
     try {
-      // 동적 import로 html2canvas 로드
-      const html2canvasModule = await import("html2canvas");
-      const html2canvas = html2canvasModule.default;
-
+      const { toPng } = await import("html-to-image");
       const target = captureRef.current;
 
-      const canvas = await html2canvas(target, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
+      const dataUrl = await toPng(target, {
+        pixelRatio: 2,
         backgroundColor: "#ffffff",
-        logging: false,
-        imageTimeout: 15000,
-        onclone: (clonedDoc) => {
-          // 클론된 DOM에서 선택 링/커서 스타일 제거
-          const clonedTarget = clonedDoc.querySelector("[data-capture]");
-          if (clonedTarget) {
-            (clonedTarget as HTMLElement).style.paddingBottom = "0";
-          }
+        cacheBust: true,
+        filter: (node: HTMLElement) => {
+          // ring/선택 UI 관련 스타일 필터링 안 함 (전부 캡처)
+          return true;
         },
       });
 
       if (withWatermark) {
+        // 워터마크를 위해 canvas로 변환
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = reject;
+        });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          ctx.save();
+          ctx.drawImage(img, 0, 0);
+
           const w = canvas.width;
           const h = canvas.height;
           const fontSize = Math.max(w * 0.12, 60);
@@ -151,7 +154,7 @@ export default function EditorPage() {
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
 
-          // 대각선 반복 패턴
+          ctx.save();
           ctx.translate(w / 2, h / 2);
           ctx.rotate(-Math.PI / 6);
 
@@ -161,20 +164,14 @@ export default function EditorPage() {
               ctx.fillText("SAMPLE", x, y);
             }
           }
-
           ctx.restore();
-        }
-      }
 
-      // canvas를 blob으로 변환 후 다운로드
-      const dataUrl = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      const suffix = withWatermark ? "_sample" : "";
-      a.download = `${page.productName}_상세페이지${suffix}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+          const watermarkedUrl = canvas.toDataURL("image/png");
+          downloadDataUrl(watermarkedUrl, `${page.productName}_상세페이지_sample.png`);
+        }
+      } else {
+        downloadDataUrl(dataUrl, `${page.productName}_상세페이지.png`);
+      }
     } catch (err) {
       console.error("PNG export error:", err);
       alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
@@ -182,6 +179,15 @@ export default function EditorPage() {
       setIsExporting(false);
       setSelectedIndex(prevSelected);
     }
+  };
+
+  const downloadDataUrl = (dataUrl: string, filename: string) => {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   if (!page) {
